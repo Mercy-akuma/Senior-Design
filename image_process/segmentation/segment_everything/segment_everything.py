@@ -41,26 +41,22 @@
 
 
 
+import argparse
 #这是一个seganythng的demo
 #先导入必要的包
 import os
 import sys
 import time
-import argparse
-import time
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-import matplotlib.pyplot as plt
 from PIL import Image
-
-
 #这里是导入segment_anything包
-from segment_anything import SamPredictor, sam_model_registry
-from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
-from segment_anything import sam_model_registry
+from segment_anything import (SamAutomaticMaskGenerator, SamPredictor,
+                              sam_model_registry)
 
 
 def logging(filename,log):
@@ -70,9 +66,6 @@ def logging(filename,log):
 
 
 def gen_mask(image_path,output_folder,sam):
-    
-    
-
     #输出模型加载完成的current时间
 
     current_time1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -159,6 +152,61 @@ def gen_mask(image_path,output_folder,sam):
     merged_output_file = os.path.join(output_folder, "mask_all.png")
     cv2.imwrite(merged_output_file, merged_mask)
     
+ 
+ 
+
+def show_mask(mask, ax, random_color=False):
+    if random_color:
+        color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+    else:
+        color = np.array([30 / 255, 144 / 255, 255 / 255, 0.6])
+    h, w = mask.shape[-2:]
+    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+    ax.imshow(mask_image)
+ 
+ 
+def show_points(coords, labels, ax, marker_size=375):
+    pos_points = coords[labels == 1]
+    neg_points = coords[labels == 0]
+    ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='*', s=marker_size, edgecolor='white',
+               linewidth=1.25)
+    ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='*', s=marker_size, edgecolor='white',
+               linewidth=1.25)
+ 
+ 
+def seg_point(sam,img_path,out_path,point=[0,0]):
+    predictor = SamPredictor(sam)
+
+    image = cv2.imread(img_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    predictor.set_image(image)
+    
+    input_point = np.array([point])
+    input_label = np.array([1])
+    
+    # plt.figure(figsize=(10,10))
+    # plt.imshow(image)
+    # show_points(input_point, input_label, plt.gca())
+    # plt.axis('on')
+    # plt.show()
+    masks, scores, logits = predictor.predict(
+        point_coords=input_point,
+        point_labels=input_label,
+        multimask_output=True,
+    )
+    
+    # 遍历读取每个扣出的结果
+    for i, (mask, score) in enumerate(zip(masks, scores)):
+        plt.figure(figsize=(10,10))
+        plt.imshow(image)
+        show_mask(mask, plt.gca())
+        show_points(input_point, input_label, plt.gca())
+        plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
+        plt.axis('off')
+        # plt.show()
+        plt.savefig(out_path+"/seg_point_"+str(i)+".jpg")
+    
     
 def main():    
     # #释放cv2
@@ -175,10 +223,13 @@ def main():
 
     #这里是加载模型，这里的model_path是模型的路径，sam_model_registry是模型的名称
 
-    img_list=["test_rgb_image.jpg","test_thermal.png","test.jpg"]
+    # img_list=["test_rgb_image.jpg","test_thermal.png","test.jpg"]
+    img_list=["img_optical.jpg","img_thermal.jpg","test.jpg"]
     pth_list=["sam_vit_h_4b8939.pth","sam_vit_b_01ec64.pth","sam_vit_l_0b3195.pth"]
     pth_type=["vit_h","vit_b","vit_l"]
     
+    
+    pth_list=[pth_list[0]]
     
     idx=-1
     for pth_name in pth_list:
@@ -186,18 +237,27 @@ def main():
         for img_name in img_list:
             image_path = "./ori_figs/" + img_name
             output_folder = "./out_figs/"+pth_name+"/" + img_name
-            model_path = "./pth/" +pth_name
+            model_path = "./pth/" + pth_name
             # 确保输出文件夹存在
             os.makedirs(output_folder, exist_ok=True)
-            print("start: {},{}".format(img_name,pth_name))
+            start_time=time.time()
+            print("start at \t{}:\t {},{}".format(start_time,img_name,pth_name))
+            
             #官方demo加载模型的方式
             sam = sam_model_registry[pth_type[idx]](checkpoint=model_path)
-            # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            # sam = sam.to(device)
-            gen_mask(image_path,output_folder,sam)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            sam = sam.to(device)
             
-            print("finish: {},{}".format(img_name,pth_name))
+            # gen_mask(image_path,output_folder,sam)
+            output_path = "./out_figs/"+"/seg_points/" + img_name
+            os.makedirs(output_path , exist_ok=True)
+            seg_point(sam,image_path,output_path,[240,180])
+            end_time=time.time()
+            print("finish at \t{}:\t {},{}".format(end_time,img_name,pth_name))
+            print("time spend \t{}:\t {},{}".format(end_time-start_time,img_name,pth_name))
+            # print("finish: {},{}".format(img_name,pth_name))
             # logging("log.txt","{},{}".format(img_name,pth_name))
+            
         
 
 if __name__ == "__main__":
