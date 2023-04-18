@@ -17,7 +17,7 @@ pip install scikit-image
 
 pip install numpy 
 
-conda create -n img --clone base
+conda create -n cuda --clone sd
 conda env list
 conda deactivate 
 conda activate sd

@@ -1,0 +1,9 @@
+load model start at 	1681832966.6628728:	 sam_vit_b_01ec64.pth
+load model end at 	1681832967.4580398:	 sam_vit_b_01ec64.pth
+time spend 	0.7951669692993164:	 sam_vit_b_01ec64.pth
+run start at 	1681832967.4590418:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+run finish at 	1681832983.4856846:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+time spend 	16.02664279937744:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+run start at 	1681832983.48762:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
+run finish at 	1681833002.0662093:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
+time spend 	18.57858920097351:	 reg_thermal.jpg,sam_vit_b_01ec64.pth

@@ -1,0 +1,3 @@
+load model start at 	1681832655.2150896:	 sam_vit_h_4b8939.pth
+load model end at 	1681832692.0146446:	 sam_vit_h_4b8939.pth
+time spend 	36.79955506324768:	 sam_vit_h_4b8939.pth
