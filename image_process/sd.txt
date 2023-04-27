@@ -1,6 +1,10 @@
 conda create -n sd python=3.9
 conda activate sd
+<<<<<<< HEAD
 pip install -r requirements.txt
+=======
+pip install --target=D:/software/anaconda3/envs/sd/lib/site-packages -r requirements.txt
+>>>>>>> c7a69935b324e6bbafe1f69734d9ec12a3388824
 pip install git+http://github.com/facebookresearch/segment-anything.git
 python -m sysconfig > sd_config.txt
 pip list > sd_list.txt
@@ -17,7 +21,11 @@ pip install scikit-image
 
 pip install numpy 
 
+<<<<<<< HEAD
 conda create -n new --clone base
+=======
+conda create -n cuda --clone sd
+>>>>>>> c7a69935b324e6bbafe1f69734d9ec12a3388824
 conda env list
 conda deactivate 
 conda activate sd
