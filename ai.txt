@@ -1,0 +1,38 @@
+conda create -n ai python=3.9
+conda activate ai
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip3 install -r requirements.txt
+pip3 install git+http://github.com/facebookresearch/segment-anything.git
+
+
+cuda:
+https://blog.csdn.net/Next_SummerAgain/article/details/129463931
+https://developer.nvidia.com/cuda-toolkit-archive    （11.8.0）
+https://developer.nvidia.com/rdp/cudnn-download （11.x）
+
+after download cudnn:
+unzip and copy bin, include, lib to:
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8
+
+
+check
+python -m sysconfig > ai_config.txt
+pip list > ai_list.txt
+
+run：
+cd ..
+python img_reg.py
+
+(or
+python3 img_reg.py) 
+
+
+
+
+
+
+
+
+
+
+

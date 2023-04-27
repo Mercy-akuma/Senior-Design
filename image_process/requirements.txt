@@ -1,0 +1,11 @@
+setuptools 
+matplotlib 
+opencv-python 
+pycocotools 
+onnx 
+black 
+isort
+imutils
+scipy
+tensorflow
+lap
