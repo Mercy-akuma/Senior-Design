@@ -41,10 +41,10 @@ def del_files(path_file):
 
 class Sam():
     def __init__(self, 
+                target_size: tuple = (640,480),
                 pth_name: str ="sam_vit_b_01ec64.pth",
                 pth_type: str ="vit_b",
                 log_file: str ="log.txt"
-                
         ):
         # self.masked_optical="D:\_docker_mnt\py\sd\image_process\out_figs\sam_vit_h_4b8939.pth\img_optical.jpg+new.jpg"
         # self.masked_thermal="D:\_docker_mnt\py\sd\image_process\out_figs\sam_vit_h_4b8939.pth\img_thermal.jpg+new.jpg"
@@ -65,6 +65,8 @@ class Sam():
         end_time=time.time()
         self.logging("load model end at \t{}:\t {}".format(end_time,self.pth_name))
         self.logging("time spend \t{}:\t {}".format(end_time-start_time,self.pth_name))
+
+        self.target_size = target_size
         
     def logging(self,log:str):
         with open(self.log_file, 'a') as f:
@@ -171,11 +173,38 @@ class Sam():
         predictor = SamPredictor(self.sam)
         predictor.set_image(image)
         
-        offset=30
-        input_box = np.array([offset, offset, 240-offset, 180-offset])
+        # offset=self.target_size[0]/8
 
-        # input_point = np.array([[500, 375], [1125, 625]])
-        # input_label = np.array([1, 0])
+        # sign_list=[[1,1],[1,-1],[-1,-1],[-1,-1]]
+        offset=30
+        input_box = np.array([offset, offset, self.target_size[0]-offset, self.target_size[1]-offset])
+
+        # input_point= np.array([])
+       
+        # new=np.array([self.target_size[0]/2 , self.target_size[1]/2])
+        # # input_point= np.append(input_point,[[self.target_size[0]/2 , self.target_size[1]/2]],axis=0)
+        # input_point= np.append(input_point,[new],axis=0)
+
+        # input_point = np.array([[self.target_size[0]/2 , self.target_size[1]/2]])
+
+
+        # # newArray = np.append(a, [[50, 60]], axis = 0)
+        # # print(newArray)
+
+        # for i in range(4):
+        #     offset_y = sign_list[i][0] * offset
+        #     offset_x = sign_list[i][1] * offset
+        #     input_point= np.append(input_point,[[self.target_size[0]/2 + offset_y, self.target_size[1]/2 + offset_x]],axis=0)
+
+        offset_y = self.target_size[0]/3
+        offset_x = self.target_size[1]/3
+
+        input_box = np.array([ int(self.target_size[0]/2 - offset_y), int(self.target_size[1]/2 - offset_x), int(self.target_size[0]/2 + offset_y), int(self.target_size[1]/2 + offset_x)])
+        print(input_box)
+
+
+        # input_point = np.array([[self.target_size[0]/2 , self.target_size[1]/2],[self.target_size[0]/2 +offset , self.target_size[1]/2 +offset]])
+        # input_label = np.ones(5)
 
         # mask_input = logits[np.argmax(scores), :, :]  # Choose the model's best mask
 
@@ -184,7 +213,7 @@ class Sam():
         # input_label = np.array([1])
         masks, scores, logits = predictor.predict(
             point_coords=None,
-            point_labels=None, 
+            point_labels=None,
             box=input_box, 
             mask_input=None, 
             multimask_output=False, 
@@ -232,7 +261,6 @@ class Sam():
         # self.gen_mask(image_path,output_folder,self.sam)
         start_time=time.time()
         self.logging("run start at \t{}:\t {},{}".format(start_time,img_name,self.pth_name))
-        # self.seg_point(image_path,output_path,[240,180])
         
         self.seg_chip(image,output_path)
         end_time=time.time()
@@ -244,18 +272,24 @@ class Trans():
     def __init__(self, 
                 img_optical: str = "./out_figs/img_optical.jpg",
                 img_thermal: str = "./out_figs/reg_thermal.jpg",
+                raw_optical: str = '../Figure/test_rgbimage.jpg',
+                raw_thermal: str ='../Figure/test_thermal.png',
+                img_merged: str = "../Figure/test_result.jpg"
+
         ):
         self.img_optical=img_optical
         self.img_thermal=img_thermal
       
         
         self.trans_optical="./out_figs/img.jpg"
-        self.img_merged="../Figure/test_result.jpg"
+        self.img_merged = img_merged
         
-        self.raw_optical= '../Figure/test_rgbimage.jpg'
-        self.raw_thermal= '../Figure/test_thermal.png'
+        self.raw_optical= raw_optical
+        self.raw_thermal= raw_thermal
         self.cut_optical='./out_figs/cut_optical.jpg'
         self.reg_optical='./out_figs/reg_optical.jpg'
+
+        self.target_size = (640,480)
         
     def resize(self, img, size):
         # 先创建一个目标大小的幕布，然后将放缩好的图片贴到中央，这样就省去了两边填充留白的麻烦。
@@ -282,25 +316,27 @@ class Trans():
         
         return canvas
     
-    def resize_input(self):
-        target__size=(240,180)
+    def resize_input(self, target = (640,480)):
+        self.target_size = target
         img_optical= Image.open(self.raw_optical)
-        res = self.resize(img_optical,target__size)
+        res = self.resize(img_optical,self.target_size)
         res.save(self.img_optical)
         img_thermal= Image.open(self.raw_thermal)
-        res = self.resize(img_thermal,target__size)
+        res = self.resize(img_thermal,self.target_size)
         res.save(self.img_thermal)
         self.cut()
         reg_optical= Image.open(self.cut_optical)
-        res = self.resize(reg_optical,target__size)
+        res = self.resize(reg_optical,self.target_size)
         res.save(self.reg_optical)
         
     def cut(self):
-        offset_x=20 
-        offset_y=30
-        cut_optical= cv2.imread(self.img_optical)
-        res = cut_optical[offset_y:180,offset_x:240-offset_x]
-        cv2.imwrite(self.cut_optical,res) 
+        # 9 =3*3, 
+        # offset_x=int(self.target_size[0]/18)
+        # offset_y=int(self.target_size[1]/9)
+        # cut_optical= cv2.imread(self.img_optical)
+        # res = cut_optical[offset_y:self.target_size[1],offset_x:self.target_size[0]-offset_x]
+        res = cv2.imread(self.img_optical)
+        cv2.imwrite(self.cut_optical,res)
         
     def get_edge_box(self,mask_img):
         mask = cv2.imread(mask_img, cv2.COLOR_BGR2GRAY)
@@ -320,8 +356,12 @@ class Trans():
         # for b in bboxs:
         #     # rect = patches.Rectangle((b[0], b[1]), b[2], b[3], linewidth=1, edgecolor='r', facecolor='none')
         #     # print(b)
-            
+        
+        # 4 points 00 10 01 11
         pts3D=np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
+
+        # cut to same %
+
 
         # plt.show()
         # cv2.imwrite('/out_figs/mask_bboxs.jpg',mask)
@@ -333,12 +373,25 @@ class Trans():
         # 计算透视放射矩阵
         M = cv2.getPerspectiveTransform(pts3D1, pts3D2)
         # 执行变换
-        img = cv2.warpPerspective(img, M, (240,180))
+        img = cv2.warpPerspective(img, M, self.target_size)
         return img
     
     def reg(self,masked_optical,masked_thermal):
         pts3D1=self.get_edge_box(masked_optical)
         pts3D2=self.get_edge_box(masked_thermal)
+        
+        # cut
+        col_width = pts3D1[1][0] - pts3D1[0][0]
+        row_width = pts3D1[2][1] - pts3D1[0][1]
+
+        map_col_width = pts3D2[1][0] -pts3D2[0][0]
+        map_row_width = pts3D2[2][1] -pts3D2[0][1]
+
+        col_width = int(map_col_width * row_width / map_row_width)
+        # set 
+        pts3D1[1][0] = pts3D1[0][0] + col_width
+        pts3D1[3][0] = pts3D1[1][0]
+
         img_optical= cv2.imread(self.reg_optical)
         img=self.perspective(img_optical,pts3D1,pts3D2)
         cv2.imwrite(self.trans_optical,img)
@@ -354,8 +407,7 @@ class Trans():
 
 def img_reg():
     os.chdir(os.path.dirname(__file__))
-    trans=Trans()
-    trans.resize_input()   
+       
     
     # img_list=["test_rgb_image.jpg","test_thermal.png","test.jpg"]
     img_list=["reg_optical.jpg","reg_thermal.jpg"]
@@ -363,18 +415,25 @@ def img_reg():
     pth_list=["sam_vit_h_4b8939.pth","sam_vit_b_01ec64.pth","sam_vit_l_0b3195.pth"]
     pth_type=["vit_h","vit_b","vit_l"]
     
+    target_size = (640,480)
     skip=0
     for idx,pth_name in enumerate(pth_list):
         if idx != 1:
             continue
         log_file = pth_name + "_log.txt"
-        sam=Sam(pth_name, pth_type[idx],log_file)
+        sam=Sam(target_size,pth_name, pth_type[idx],log_file)
         if skip:
             break
+
+        # while true if add image
+        prefix = "../Figure/" + imagename
+        trans=Trans(raw_optical= prefix + "_rgbimage.jpg", raw_thermal=prefix + "_thermal.png", img_merged= prefix + "_result.jpg")
+        trans.resize_input()
+        # modify img_list for new pair of image TODO
         for img_name in img_list:
             sam.run_sam(img_name,image_path)
     
-    trans.reg(sam.masked_name[0],sam.masked_name[1])
+        trans.reg(sam.masked_name[0],sam.masked_name[1])
             
     
     

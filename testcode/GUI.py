@@ -81,7 +81,7 @@ class GUI:
             output_text += "Component {}'s power consumption is {}\n".format(i + 1, power_list[i])
         self.output_window = tk.Toplevel()
         self.output_window.title("Power Consumption Output")
-        self.output_text = tk.Text(self.output_window, height=10, width=50)
+        self.output_text = tk.Text(self.output_window, height=50, width=100)
         self.output_text.pack(side=tk.LEFT, fill=tk.BOTH)
         self.output_text.insert(tk.END, output_text)
         self.scrollbar = tk.Scrollbar(self.output_window)

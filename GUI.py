@@ -7,6 +7,7 @@ import threading
 from sklearn.linear_model import LinearRegression
 import serial
 import matplotlib.pyplot as plt
+import math
 # from  main import key
 class GUI:
     def __init__(self):
@@ -71,18 +72,28 @@ class GUI:
 
     def save_rect(self, event):
         # Create a mask for the rectangle
-        self.mask = np.zeros((self.image_height, self.image_width))
+        orig_height = self.data.shape[0]
+        orig_width = self.data.shape[1]
+        trans_height = self.image_height
+        trans_width = self.image_width
+        # Add a label with the ordinal number of the rectangle in the middle of the rectangle
+        self.canvas.create_text((self.rect_start_x + self.rect_end_x)/2, (self.rect_start_y + self.rect_end_y)/2, text=str(self.rect_count + 1), fill='blue', font=("Purisa", 30))
+        self.rect_start_y = self.rect_start_y * (orig_height/trans_height)
+        self.rect_end_y = self.rect_end_y * (orig_height/trans_height)
+        self.rect_start_x = self.rect_start_x * (orig_width/trans_width)
+        self.rect_end_x = self.rect_end_y * (orig_width/trans_width)
+        self.mask = np.zeros((orig_height, orig_width))
+        
         self.mask[int(self.rect_start_y):int(self.rect_end_y), int(self.rect_start_x):int(self.rect_end_x)] = 1
 
         # fill in the rest of mask by inverse distance weights
-        # center_x = (self.rect_start_x + self.rect_end_x ) / 2
-        # center_y = (self.rect_start_y + self.rect_end_y ) / 2
         # area = ((self.rect_end_y - self.rect_start_y) *  (self.rect_end_x - self.rect_start_x)) 
+        center_y = (self.rect_start_y + self.rect_end_y) / 2
+        center_x = (self.rect_start_x + self.rect_end_x) / 2
+        radius = np.sqrt((self.rect_end_y - self.rect_start_y)**2 + (self.rect_end_x - self.rect_start_x)**2 ) / 2
         list_point =  [(int(self.rect_start_y),int(self.rect_start_x)),(int(self.rect_start_y),int(self.rect_end_x)),(int(self.rect_end_y),int(self.rect_start_x)),(int(self.rect_end_y),int(self.rect_end_x))]
-        # d_max = area
-        # d_fact = area * d_max
-        for i in range(self.image_height):
-            for j in range(self.image_width):
+        for i in range(orig_height):
+            for j in range(orig_width):
                 if self.mask[i][j] == 0:
                     #average distance
                     sum_dist=0.0
@@ -91,18 +102,13 @@ class GUI:
                         dist = np.sqrt((i - m)**2 + (j - n)**2)
                         sum_dist += dist   
                     # 1/X
-                    self.mask[i][j] = 1 / (sum_dist/ 4)
-                    
-                    # self.mask[i][j] = 1 - distance
-                    # if self.mask[i][j] < 0:
-                    #     self.mask[i][j] = 0               
+                    avg_dist = sum_dist/ 4
+                    self.mask[i][j] = 1 - math.log(avg_dist / radius)
 
         self.rectangles.append((self.rect_start_x, self.rect_start_y, self.rect_end_x, self.rect_end_y, self.mask))
         self.rect = None
         self.rect_count += 1 # Increment the counter for each new rectangle drawn
-        # Add a label with the ordinal number of the rectangle in the middle of the rectangle
-        self.canvas.create_text((self.rect_start_x + self.rect_end_x)/2, (self.rect_start_y + self.rect_end_y)/2, text=str(self.rect_count), fill='blue', font=("Purisa", 30))
-
+        
     def output_power(self):
         # Linear regression to get the energy of each rectangle
         X = []
@@ -113,9 +119,9 @@ class GUI:
         X = X.transpose()
         y = self.data.flatten()
         # Remove rows where all elements in X are 0
-        non_zero_rows = np.any(X, axis=1)
-        X = X[non_zero_rows]
-        y = y[non_zero_rows]
+        # non_zero_rows = np.any(X, axis=1)
+        # X = X[non_zero_rows]
+        # y = y[non_zero_rows]
         
         reg = LinearRegression().fit(X, y)
         rectangle_energy = reg.coef_
@@ -140,8 +146,10 @@ class GUI:
         for i in range(len(rectangle_energy)):
             output_text += "Component {}'s power consumption is {}\n".format(i + 1, rectangle_energy[i])
         self.output_window = tk.Toplevel()
+        self.output_window.geometry("500x500") # increase the size of the window
+
         self.output_window.title("Power Consumption Output")
-        self.output_text = tk.Text(self.output_window, height=10, width=50)
+        self.output_text = tk.Text(self.output_window, height=10, width=100)
         self.output_text.pack(side=tk.LEFT, fill=tk.BOTH)
         self.output_text.insert(tk.END, output_text)
         self.scrollbar = tk.Scrollbar(self.output_window)
@@ -241,18 +249,6 @@ class GUI:
         self.canvas.bind("<Button-1>", self.show_pixel_position)
         output_button = tk.Button(root, text="Output Power", command=self.output_power)
         output_button.pack(side=tk.LEFT)
-
-        # Create four buttons for wsad input
-        # wsad_frame = tk.Frame(root)
-        # wsad_frame.pack(side=tk.LEFT)
-        # w_button = tk.Button(wsad_frame, text="W", command=lambda: self.send_key("w"))
-        # w_button.pack(side=tk.TOP)
-        # s_button = tk.Button(wsad_frame, text="S", command=lambda: self.send_key("s"))
-        # s_button.pack(side=tk.BOTTOM)
-        # a_button = tk.Button(wsad_frame, text="A", command=lambda: self.send_key("a"))
-        # a_button.pack(side=tk.LEFT)
-        # d_button = tk.Button(wsad_frame, text="D", command=lambda: self.send_key("d"))
-        # d_button.pack(side=tk.RIGHT)
 
         root.mainloop()
         
