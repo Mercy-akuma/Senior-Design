@@ -233,7 +233,7 @@ class GUI:
 
     def check_mew_image(self):
         # 检测文件夹下最新的jpg文件
-        folder_path = self.folderpath 
+        folder_path = "Figure/batch_process"
         files = glob.glob(os.path.join(folder_path, '*.jpg')) # 查找所有jpg文件
         if len(files) == 0:
             print("No jpg file found")
