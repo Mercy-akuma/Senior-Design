@@ -29,6 +29,7 @@ class GUI:
         # self.board_end_x = 192
         # self.board_end_y = 145
         self.imagename = None
+        self.folderpath = None
         self.mask = None
         self.rect = None
         self.image = None
@@ -50,6 +51,7 @@ class GUI:
 
         directory_path = '_'.join(self.image_path.split('_')[:-1])
         self.imagename = directory_path.split('/')[-1]
+        self.folderpath = os.path.dirname(self.image_path)
 
         file_path = directory_path + '.txt'
         self.data = np.loadtxt(file_path, delimiter=',')
@@ -152,7 +154,7 @@ class GUI:
         plt.ylabel('Predicted Temperature')
         plt.title('Linear Regression Results')
         # Save the linear regression plot as an image file
-        plt.savefig("Figure/batch_process/" + self.imagename + "_analysis" + "/linear_regression_plot.png")
+        plt.savefig(self.folderpath + "/" + self.imagename + "_analysis" + "/linear_regression_plot.png")
 
         # Calculate the R-squared value
         r_squared = reg.score(X, y)
@@ -231,7 +233,7 @@ class GUI:
 
     def check_mew_image(self):
         # 检测文件夹下最新的jpg文件
-        folder_path = 'Figure/batch_process' 
+        folder_path = self.folderpath 
         files = glob.glob(os.path.join(folder_path, '*.jpg')) # 查找所有jpg文件
         if len(files) == 0:
             print("No jpg file found")
@@ -254,9 +256,9 @@ class GUI:
         # Inverting the y-axis to move the origin to the top left corner
         ax.invert_yaxis()
         # Save the figure to the Figure folder
-        fig.savefig("Figure/batch_process/" + self.imagename + "_analysis"+ "/contour.png")
+        fig.savefig(self.folderpath + "/" + self.imagename + "_analysis"+ "/contour.png")
         # Show the figure in a new window
-        img = Image.open("Figure/batch_process/" + self.imagename + "_analysis" + "/contour.png")
+        img = Image.open(self.folderpath + "/" + self.imagename + "_analysis" + "/contour.png")
         img.show()
     
     # def send_key(self, c): 
