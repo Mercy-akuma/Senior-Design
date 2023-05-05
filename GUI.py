@@ -8,6 +8,11 @@ from sklearn.linear_model import LinearRegression
 import serial
 import matplotlib.pyplot as plt
 import math
+import glob
+import os
+import os.path
+
+# from scipy.optimize import nnls
 # from  main import key
 class GUI:
     def __init__(self):
@@ -23,7 +28,7 @@ class GUI:
         # self.board_start_y = 41
         # self.board_end_x = 192
         # self.board_end_y = 145
-
+        self.imagename = None
         self.mask = None
         self.rect = None
         self.image = None
@@ -34,21 +39,32 @@ class GUI:
         # self.key = None
         self.rect_count = 0 # Initialize a counter for the rectangles
 
-    def open_image(self):
+    def open_image(self, image_path=None):
         self.__init__()
         self.canvas.delete(tk.ALL)
-        self.image_path = filedialog.askopenfilename(filetypes=[("JPEG", "*.jpg"), ("PNG", "*.png")])
+        if image_path:
+            self.image_path = image_path.replace("\\", "/")
+            
+        else:
+            self.image_path = filedialog.askopenfilename(filetypes=[("JPEG", "*.jpg"), ("PNG", "*.png")])
+
+        directory_path = '_'.join(self.image_path.split('_')[:-1])
+        self.imagename = directory_path.split('/')[-1]
+
+        file_path = directory_path + '.txt'
+        self.data = np.loadtxt(file_path, delimiter=',')
+
         image = Image.open(self.image_path)
         self.image_width, self.image_height = image.size
         self.image = ImageTk.PhotoImage(file=self.image_path)
         self.canvas.config(width=self.image_width, height=self.image_height)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
 
-        image_path_without_extension = self.image_path.split('.')[0]
-        # Split the image_path_without_extension by '_' and take the first element as the directory path
-        directory_path = '_'.join(self.image_path.split('_')[:-1])
-        file_path = directory_path + '.txt'
-        self.data = np.loadtxt(file_path, delimiter=',')
+        # check if the directory exists
+        output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
+        if not os.path.exists(output_directory):
+            # if directory does not exist, create it
+            os.mkdir(output_directory)
 
     # def open_text(self):
     #     self.data = None
@@ -118,24 +134,25 @@ class GUI:
         X = np.array(X)
         X = X.transpose()
         y = self.data.flatten()
-        # Remove rows where all elements in X are 0
-        # non_zero_rows = np.any(X, axis=1)
-        # X = X[non_zero_rows]
-        # y = y[non_zero_rows]
         
+        # linear regression
         reg = LinearRegression().fit(X, y)
         rectangle_energy = reg.coef_
+        # non-negative least squres
+        # rectangle_energy, _ = nnls(X, y)
+
         # print(reg.intercept_)
         # Predict the energy consumption using the linear regression model
         y_pred = reg.predict(X)
 
         # Plot the predicted values against the actual values
+        plt.figure()
         plt.scatter(y, y_pred)
         plt.xlabel('Actual Temperature')
         plt.ylabel('Predicted Temperature')
         plt.title('Linear Regression Results')
         # Save the linear regression plot as an image file
-        plt.savefig('Figure/linear_regression_plot.png')
+        plt.savefig("Figure/batch_process/" + self.imagename + "_analysis" + "/linear_regression_plot.png")
 
         # Calculate the R-squared value
         r_squared = reg.score(X, y)
@@ -211,6 +228,36 @@ class GUI:
         self.canvas.bind("<Button-1>", self.show_pixel_position)
         self.canvas.unbind("<B1-Motion>")
         self.canvas.unbind("<ButtonRelease-1>")
+
+    def check_mew_image(self):
+        # 检测文件夹下最新的jpg文件
+        folder_path = 'Figure/batch_process' 
+        files = glob.glob(os.path.join(folder_path, '*.jpg')) # 查找所有jpg文件
+        if len(files) == 0:
+            print("No jpg file found")
+            return None
+        else:
+            latest_file = max(files, key=os.path.getctime) # 找到最新的文件
+            print("Latest jpg file found:", latest_file)
+        self.open_image(latest_file)
+
+    def show_contour(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        # Plotting the contour plot
+        c = ax.contour(self.data, colors='black')
+        # Adding labels for contour lines
+        ax.clabel(c, inline=True, fontsize=10)
+        # Setting the labels for the axes
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        # Inverting the y-axis to move the origin to the top left corner
+        ax.invert_yaxis()
+        # Save the figure to the Figure folder
+        fig.savefig("Figure/batch_process/" + self.imagename + "_analysis"+ "/contour.png")
+        # Show the figure in a new window
+        img = Image.open("Figure/batch_process/" + self.imagename + "_analysis" + "/contour.png")
+        img.show()
     
     # def send_key(self, c): 
     #     key = c
@@ -235,6 +282,7 @@ class GUI:
         file_menu.add_command(label="Import Image", command=self.open_image)
         # file_menu.add_command(label="Import Text", command=self.open_text)
         file_menu.add_command(label="Show Image", command=self.show_image)
+        file_menu.add_command(label="Check New Image", command=self.check_mew_image)
         # Operation_menu
         # operation_menu.add_command(label="Output Power", command=self.output_power)
         operation_menu.add_command(label="Enable Connection", command=self.cmd_enable)
@@ -249,6 +297,11 @@ class GUI:
         self.canvas.bind("<Button-1>", self.show_pixel_position)
         output_button = tk.Button(root, text="Output Power", command=self.output_power)
         output_button.pack(side=tk.LEFT)
+
+        # Add a button to show the figure
+        show_figure_button = tk.Button(root, text="Show Contour", command=self.show_contour)
+        show_figure_button.pack(side=tk.LEFT)
+
 
         root.mainloop()
         
