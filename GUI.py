@@ -99,7 +99,7 @@ class GUI:
         self.rect_start_y = self.rect_start_y * (orig_height/trans_height)
         self.rect_end_y = self.rect_end_y * (orig_height/trans_height)
         self.rect_start_x = self.rect_start_x * (orig_width/trans_width)
-        self.rect_end_x = self.rect_end_y * (orig_width/trans_width)
+        self.rect_end_x = self.rect_end_x * (orig_width/trans_width)
         self.mask = np.zeros((orig_height, orig_width))
         
         self.mask[int(self.rect_start_y):int(self.rect_end_y), int(self.rect_start_x):int(self.rect_end_x)] = 1
