@@ -11,9 +11,14 @@ import math
 import glob
 import os
 import os.path
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+import pickle
 
-# from scipy.optimize import nnls
+from scipy.optimize import nnls
 # from  main import key
+
 class GUI:
     def __init__(self):
         self.rectangles = []
@@ -23,11 +28,39 @@ class GUI:
         self.rect_start_y = None
         self.rect_end_x = None
         self.rect_end_y = None
-        # # segmentation for PCB
-        # self.board_start_x = 48
-        # self.board_start_y = 41
-        # self.board_end_x = 192
-        # self.board_end_y = 145
+        self.imagename = None
+        self.folderpath = None
+        self.mask = None
+        self.rect = None
+        self.history = []
+        self.image = None
+        self.data = None # temperature data
+        self.image_path = None
+        self.image_width = None
+        self.image_height = None
+        # self.key = None
+        self.rect_count = 0 # Initialize a counter for the rectangles
+        self.root = None
+        self.output_window = None
+        self.flag = 0
+
+    def del_files(self, path_file):
+        ls = os.listdir(path_file)
+        for i in ls:
+            f_path = os.path.join(path_file, i)
+            if os.path.isdir(f_path):
+                del_files(f_path)
+            elif os.path.basename(f_path) != "rectangles.dat": # Check if the file is not 'rectangles.dat'
+                os.remove(f_path)
+
+    def open_image(self, image_path=None):
+        self.rectangles = []
+        self.total_power = None # Initialize total_power to None
+        # parameters when drawing a rectangle
+        self.rect_start_x = None
+        self.rect_start_y = None
+        self.rect_end_x = None
+        self.rect_end_y = None
         self.imagename = None
         self.folderpath = None
         self.mask = None
@@ -37,11 +70,9 @@ class GUI:
         self.image_path = None
         self.image_width = None
         self.image_height = None
+        self.flag = 1
         # self.key = None
         self.rect_count = 0 # Initialize a counter for the rectangles
-
-    def open_image(self, image_path=None):
-        self.__init__()
         self.canvas.delete(tk.ALL)
         if image_path:
             self.image_path = image_path.replace("\\", "/")
@@ -67,6 +98,8 @@ class GUI:
         if not os.path.exists(output_directory):
             # if directory does not exist, create it
             os.mkdir(output_directory)
+        self.del_files(output_directory)
+        open(self.folderpath + "/" + self.imagename + "_analysis" + "/image_log.txt", 'w').close()
 
     # def open_text(self):
     #     self.data = None
@@ -74,10 +107,14 @@ class GUI:
     #     self.data = np.transpose(np.loadtxt(file_path, delimiter=','))
     
     def start_rect(self, event):
+        if self.flag == 0:
+            return
         self.rect_start_x = self.canvas.canvasx(event.x)
         self.rect_start_y = self.canvas.canvasy(event.y)
 
     def draw_rect(self, event):
+        if self.flag == 0:
+            return
         self.rect_end_x = self.canvas.canvasx(event.x)
         self.rect_end_y = self.canvas.canvasy(event.y)
         if self.rect:
@@ -86,14 +123,54 @@ class GUI:
         self.rect_start_y = max(0, min(self.rect_start_y, self.image_height))
         self.rect_end_x = max(0, min(self.rect_end_x, self.image_width))
         self.rect_end_y = max(0, min(self.rect_end_y, self.image_height))
+        # Save the rectangle as an object on the canvas
         self.rect = self.canvas.create_rectangle(self.rect_start_x, self.rect_start_y, self.rect_end_x, self.rect_end_y, outline='red')
 
+    def save_location(self):
+        """
+        This function saves the self.rectangles list to a binary file in the output directory.
+        """
+        output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
+        with open(os.path.join(output_directory, "rectangles.dat"), "wb") as f:
+            pickle.dump(self.rectangles, f)
+        print("Saved successfully")
+
+    def load_location(self):
+        """
+        This function loads the rectangles from a binary file and adds them to self.rectangles.
+        """
+        output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
+        with open(os.path.join(output_directory, "rectangles.dat"), "rb") as f:
+            self.rectangles = pickle.load(f)
+        print("Loaded successfully")
+
+        orig_height = self.data.shape[0]
+        orig_width = self.data.shape[1]
+        trans_height = self.image_height
+        trans_width = self.image_width
+        count = 0
+        for rectangle in self.rectangles:
+            count += 1
+            start_x = rectangle[0] / (orig_width/trans_width)
+            start_y = rectangle[1] / (orig_height/trans_height)
+            end_x = rectangle[2] / (orig_width/trans_width)
+            end_y = rectangle[3] / (orig_height/trans_height)
+            self.canvas.create_rectangle(start_x, start_y, end_x, end_y, outline='red')
+            self.canvas.create_text((start_x + end_x)/2, (start_y + end_y)/2, text=str(count), fill='blue', font=("Purisa", 30))
+        self.rect = None
+        self.rect_count = len(self.rectangles)
+
     def save_rect(self, event):
+        if self.flag == 0:
+            return
         # Create a mask for the rectangle
         orig_height = self.data.shape[0]
         orig_width = self.data.shape[1]
         trans_height = self.image_height
         trans_width = self.image_width
+        
+        # print([self.rect_start_y,self.rect_end_y,self.rect_start_x,self.rect_end_x])
+        
         # Add a label with the ordinal number of the rectangle in the middle of the rectangle
         self.canvas.create_text((self.rect_start_x + self.rect_end_x)/2, (self.rect_start_y + self.rect_end_y)/2, text=str(self.rect_count + 1), fill='blue', font=("Purisa", 30))
         self.rect_start_y = self.rect_start_y * (orig_height/trans_height)
@@ -102,49 +179,69 @@ class GUI:
         self.rect_end_x = self.rect_end_x * (orig_width/trans_width)
         self.mask = np.zeros((orig_height, orig_width))
         
-        self.mask[int(self.rect_start_y):int(self.rect_end_y), int(self.rect_start_x):int(self.rect_end_x)] = 1
+        # print([orig_height,trans_height,orig_width,trans_width])
+        # print([self.rect_start_y,self.rect_end_y,self.rect_start_x,self.rect_end_x])
+        big_x = int(max(self.rect_end_x,self.rect_start_x))
+        small_x= int(min(self.rect_end_x,self.rect_start_x))
+        big_y = int(max(self.rect_end_y,self.rect_start_y))
+        small_y = int(min(self.rect_end_y,self.rect_start_y))
+        
+        self.mask[small_y:big_y, small_x:big_x] = 1
 
-        # fill in the rest of mask by inverse distance weights
-        # area = ((self.rect_end_y - self.rect_start_y) *  (self.rect_end_x - self.rect_start_x)) 
-        center_y = (self.rect_start_y + self.rect_end_y) / 2
-        center_x = (self.rect_start_x + self.rect_end_x) / 2
-        radius = np.sqrt((self.rect_end_y - self.rect_start_y)**2 + (self.rect_end_x - self.rect_start_x)**2 ) / 2
-        list_point =  [(int(self.rect_start_y),int(self.rect_start_x)),(int(self.rect_start_y),int(self.rect_end_x)),(int(self.rect_end_y),int(self.rect_start_x)),(int(self.rect_end_y),int(self.rect_end_x))]
+        w = big_x - small_x
+        l = big_y - small_y
+        plt_rect = plt.Rectangle(xy=(small_x,small_y),width=w, height=l,linewidth=1, edgecolor='r',facecolor='r')
+
+        area = w*l
+        print("w,l: {},{}".format(w,l))
+        c = abs(2*(w+l))
+        radius = np.sqrt(w**2+l**2)/2
         for i in range(orig_height):
             for j in range(orig_width):
                 if self.mask[i][j] == 0:
-                    #average distance
-                    sum_dist=0.0
-                    
-                    for m,n in list_point:
-                        dist = np.sqrt((i - m)**2 + (j - n)**2)
-                        sum_dist += dist   
-                    # 1/X
-                    avg_dist = sum_dist/ 4
-                    self.mask[i][j] = 1 - math.log(avg_dist / radius)
+                    # y -- i, x -- j
+                    location = [i-big_y,i-small_y,j-big_x,j-small_x]
+                    if location[1] < 0 and location[3] < 0:
+                        r = np.sqrt(location[1]**2 + location[3]**2 )
+                    elif location[0] > 0 and location[2] > 0:
+                        r = np.sqrt(location[0]**2 + location[2]**2 )
+                    elif location[1] < 0 and location[2] > 0 :
+                        r = np.sqrt(location[1]**2 + location[2]**2 )
+                    elif location[0] > 0 and location[3] < 0:
+                        r = np.sqrt(location[0]**2 + location[3]**2 )
+                    elif location[0] <= 0 and location[1] >= 0 and location[2] > 0:
+                        r = abs(location[2])
+                    elif location[0] <= 0 and location[1] >= 0 and location[3] < 0:
+                        r = abs(location[3])
+                    elif location[0] > 0 and location[2] <= 0 and location[3] >= 0:
+                        r = abs(location[0])
+                    elif location[1] < 0 and location[2] <= 0 and location[3] >= 0:
+                        r = abs(location[1])
+                    else:
+                        continue # not possible, same with self.mask[i][j] == 1
+                    new_area = area + 2*r*(w+l) + math.pi*r**2
 
-        self.rectangles.append((self.rect_start_x, self.rect_start_y, self.rect_end_x, self.rect_end_y, self.mask))
+                    self.mask[i][j] = 1/r
+
+        self.rectangles.append((small_x, small_y, big_x, big_y, self.mask, plt_rect))
         self.rect = None
-        self.rect_count += 1 # Increment the counter for each new rectangle drawn
+        self.rect_count += 1 # Increment the counter for each new rectangle draw
         
     def output_power(self):
         # Linear regression to get the energy of each rectangle
         X = []
         for rect in self.rectangles:
-            start_x, start_y, end_x, end_y, mask = rect
+            small_x, small_y, big_x, big_y, mask, plt_rect = rect
             X.append(mask.flatten())
+            
         X = np.array(X)
         X = X.transpose()
         y = self.data.flatten()
         
         # linear regression
-        reg = LinearRegression().fit(X, y)
+        reg = LinearRegression(positive = True).fit(X, y)
         rectangle_energy = reg.coef_
-        # non-negative least squres
-        # rectangle_energy, _ = nnls(X, y)
-
-        # print(reg.intercept_)
-        # Predict the energy consumption using the linear regression model
+        rectangle_energy = rectangle_energy / np.sum(rectangle_energy) * self.total_power
         y_pred = reg.predict(X)
 
         # Plot the predicted values against the actual values
@@ -159,11 +256,15 @@ class GUI:
         # Calculate the R-squared value
         r_squared = reg.score(X, y)
         print("R-squared value:", r_squared)
-        rectangle_energy = rectangle_energy / np.sum(rectangle_energy) * self.total_power
+        self.logging("R-squared value: {} ".format(r_squared))
+        self.logging("reg.coef_ value: {} ".format(reg.coef_))
+        self.logging("reg.intercept_ value: {} ".format(reg.intercept_))
+        self.logging("b: {} ".format(min(y)))
 
         output_text = ""
         for i in range(len(rectangle_energy)):
             output_text += "Component {}'s power consumption is {}\n".format(i + 1, rectangle_energy[i])
+            self.plot_mask(i)
         self.output_window = tk.Toplevel()
         self.output_window.geometry("500x500") # increase the size of the window
 
@@ -175,6 +276,32 @@ class GUI:
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.scrollbar.config(command=self.output_text.yview)
         self.output_text.config(yscrollcommand=self.scrollbar.set)
+        self.output_window.protocol("WM_DELETE_WINDOW", self.quit_window)
+        self.output_window.mainloop()
+
+    def logging(self, log:str):
+        with open(self.folderpath + "/" + self.imagename + "_analysis" + "/image_log.txt", 'a') as f:
+            print(log, file=f)
+
+    def plot_mask(self, i:int): # i means the index of mask
+        # "Component {}'s mask".fomat(i)
+        mask = self.rectangles[i][4]
+        rectangle = self.rectangles[i][5]
+
+        # Plot the predicted values against the actual values
+        img=plt.figure()
+        ax=img.add_subplot(111)
+        plt.imshow(mask)
+        # contour=plt.contourf(mask,np.arange(0.0, 1.1, 0.1))
+        contour=plt.contourf(mask)
+        # plt.colorbar(img)
+        plt.colorbar(contour)
+        # plt.clabel(contour,fontsize=10,inline=1, colors='k')
+        
+        currentAxis = img.gca()
+        currentAxis.add_patch(rectangle)
+        
+        plt.savefig(self.folderpath + "/" + self.imagename + "_analysis" + "/mask_{}.png".format(i + 1))
 
     def show_image(self):
         # Create a new window
@@ -221,15 +348,6 @@ class GUI:
             x, y = event.x, event.y
             print("Pixel position: ({}, {})".format(x, y))
     
-    def enable_drawing(self):
-        self.canvas.bind("<Button-1>", self.start_rect)
-        self.canvas.bind("<B1-Motion>", self.draw_rect)
-        self.canvas.bind("<ButtonRelease-1>", lambda event: self.save_rect(event))
-    
-    def disable_drawing(self):
-        self.canvas.bind("<Button-1>", self.show_pixel_position)
-        self.canvas.unbind("<B1-Motion>")
-        self.canvas.unbind("<ButtonRelease-1>")
 
     def check_mew_image(self):
         # 检测文件夹下最新的jpg文件
@@ -261,23 +379,29 @@ class GUI:
         img = Image.open(self.folderpath + "/" + self.imagename + "_analysis" + "/contour.png")
         img.show()
     
-    # def send_key(self, c): 
-    #     key = c
+    def quit_me(self):
+        print('quit')
+        self.root.quit()
+        self.root.destroy()
+
+    def quit_window(self):
+        self.output_window.quit()
+        self.output_window.destroy()
 
     def run(self):
-        root = tk.Tk()
-        root.title("Power Consumption GUI")
-        self.canvas = tk.Canvas(root, width=800, height=600)
+        self.root = tk.Tk()
+        self.root.title("Power Consumption GUI")
+        self.canvas = tk.Canvas(self.root, width=800, height=600)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         # Add a label and entry for total_power
-        tk.Label(root, text="Total Power:").pack(side=tk.LEFT)
-        total_power_entry = tk.Entry(root)
+        tk.Label(self.root, text="Total Power:").pack(side=tk.LEFT)
+        total_power_entry = tk.Entry(self.root)
         total_power_entry.pack(side=tk.LEFT)
         # Add a button to set total_power
-        set_power_button = tk.Button(root, text="Set Power", command=lambda: setattr(self, 'total_power', float(total_power_entry.get())))
+        set_power_button = tk.Button(self.root, text="Set Power", command=lambda: setattr(self, 'total_power', float(total_power_entry.get())))
         set_power_button.pack(side=tk.LEFT)
 
-        menu_bar = tk.Menu(root)
+        menu_bar = tk.Menu(self.root)
         file_menu = tk.Menu(menu_bar, tearoff=0)
         operation_menu = tk.Menu(menu_bar, tearoff=0)
         # File_menu
@@ -289,23 +413,39 @@ class GUI:
         # operation_menu.add_command(label="Output Power", command=self.output_power)
         operation_menu.add_command(label="Enable Connection", command=self.cmd_enable)
         operation_menu.add_command(label="Disable Connection", command=self.cmd_disable)
-        operation_menu.add_command(label="Enable Drawing", command=self.enable_drawing)
-        operation_menu.add_command(label="Disable Drawing", command=self.disable_drawing)
+        # operation_menu.add_command(label="Enable Drawing", command=self.enable_drawing)
+        # operation_menu.add_command(label="Disable Drawing", command=self.disable_drawing)
+        # operation_menu.add_command(label="Quit", command=self.break_mainloop)
+
+        # Bind the window close button to the quit_me function
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_me)
 
         menu_bar.add_cascade(label="File", menu=file_menu)
         menu_bar.add_cascade(label="Operation", menu=operation_menu)
-        root.config(menu=menu_bar)
+        self.root.config(menu=menu_bar)
 
-        self.canvas.bind("<Button-1>", self.show_pixel_position)
-        output_button = tk.Button(root, text="Output Power", command=self.output_power)
+        self.canvas.bind("<Button-1>", self.start_rect)
+        self.canvas.bind("<B1-Motion>", self.draw_rect)
+        self.canvas.bind("<ButtonRelease-1>", lambda event: self.save_rect(event))
+        
+        output_button = tk.Button(self.root, text="Output Power", command=self.output_power)
         output_button.pack(side=tk.LEFT)
 
         # Add a button to show the figure
-        show_figure_button = tk.Button(root, text="Show Contour", command=self.show_contour)
+        show_figure_button = tk.Button(self.root, text="Show Contour", command=self.show_contour)
         show_figure_button.pack(side=tk.LEFT)
 
+        # Add a button to save rectangles data
+        show_figure_button = tk.Button(self.root, text="Save Location", command=self.save_location)
+        show_figure_button.pack(side=tk.LEFT)
 
-        root.mainloop()
+        # Add a button to load rectangles data
+        show_figure_button = tk.Button(self.root, text="Load Location", command=self.load_location)
+        show_figure_button.pack(side=tk.LEFT)
+
+        self.root.mainloop()
+
+
         
 
 
