@@ -185,6 +185,7 @@ class GUI:
         trans_height = self.image_height
         trans_width = self.image_width
         count = 0
+        self.history = []
         for rectangle in tmp_rectangles:
             count += 1
             start_x = rectangle[0] / (orig_width/trans_width)
@@ -235,12 +236,12 @@ class GUI:
 
         w = big_x - small_x
         l = big_y - small_y
-        plt_rect = plt.Rectangle(xy=(small_x,small_y),width=w, height=l,linewidth=1, edgecolor='r',facecolor='r')
+        # plt_rect = plt.Rectangle(xy=(small_x,small_y),width=w, height=l,linewidth=1, edgecolor='r',facecolor='r')
 
-        area = w*l
+        # area = w*l
         # print("w,l: {},{}".format(w,l))
         c = abs(2*(w+l))
-        radius = np.sqrt(w**2+l**2)/2
+        # radius = np.sqrt(w**2+l**2)/2
         for i in range(orig_height):
             for j in range(orig_width):
                 if self.mask[i][j] == 0:
@@ -264,7 +265,7 @@ class GUI:
                         r = abs(location[1])
                     else:
                         continue # not possible, same with self.mask[i][j] == 1
-                    new_area = area + 2*r*(w+l) + math.pi*r**2
+                    # new_area = area + 2*r*(w+l) + math.pi*r**2
                     new_c = c + 2 * math.pi * r
                     # self.mask[i][j] = 1/r
                     # self.mask[i][j] = area/new_area

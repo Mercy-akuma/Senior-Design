@@ -9,7 +9,7 @@ from Find_inputbox import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-imagename = "Arduino1"
+imagename = "FPGA3"
 
 def run_gui():
     drawer = GUI()
@@ -34,4 +34,4 @@ if __name__ == '__main__':
     # t1.join()
     # t2.join()
 
-    # run_gui()
+    run_gui()
