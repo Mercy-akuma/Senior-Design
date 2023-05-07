@@ -49,7 +49,7 @@ class GUI:
         for i in ls:
             f_path = os.path.join(path_file, i)
             if os.path.isdir(f_path):
-                del_files(f_path)
+                self.del_files(f_path)
             elif os.path.basename(f_path) != "rectangles.dat": # Check if the file is not 'rectangles.dat'
                 os.remove(f_path)
 
@@ -173,7 +173,7 @@ class GUI:
             return
         output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
         with open(os.path.join(output_directory, "rectangles.dat"), "rb") as f:
-            self.rectangles = pickle.load(f)
+            tmp_rectangles = pickle.load(f)
         print("Loaded successfully")
 
         for old_rect in self.history:
@@ -185,17 +185,24 @@ class GUI:
         trans_height = self.image_height
         trans_width = self.image_width
         count = 0
-        for rectangle in self.rectangles:
+        for rectangle in tmp_rectangles:
             count += 1
             start_x = rectangle[0] / (orig_width/trans_width)
             start_y = rectangle[1] / (orig_height/trans_height)
             end_x = rectangle[2] / (orig_width/trans_width)
             end_y = rectangle[3] / (orig_height/trans_height)
+            self.rect_start_x = start_x
+            self.rect_start_y = start_y
+            self.rect_end_x = end_x
+            self.rect_end_y = end_y
+            self.save_rect(0)
             self.rect = self.canvas.create_rectangle(start_x, start_y, end_x, end_y, outline='red')
             self.text = self.canvas.create_text((start_x + end_x)/2, (start_y + end_y)/2, text=str(count), fill='blue', font=("Purisa", 30))
             self.history.append((self.rect, self.text))
         self.rect = None
         self.rect_count = len(self.rectangles)
+        
+        # self.rectangles= tmp_rectangles
 
     def save_rect(self, event):
         if self.flag == 0:
@@ -231,7 +238,7 @@ class GUI:
         plt_rect = plt.Rectangle(xy=(small_x,small_y),width=w, height=l,linewidth=1, edgecolor='r',facecolor='r')
 
         area = w*l
-        print("w,l: {},{}".format(w,l))
+        # print("w,l: {},{}".format(w,l))
         c = abs(2*(w+l))
         radius = np.sqrt(w**2+l**2)/2
         for i in range(orig_height):
@@ -258,8 +265,11 @@ class GUI:
                     else:
                         continue # not possible, same with self.mask[i][j] == 1
                     new_area = area + 2*r*(w+l) + math.pi*r**2
-
-                    self.mask[i][j] = 1/r
+                    new_c = c + 2 * math.pi * r
+                    # self.mask[i][j] = 1/r
+                    # self.mask[i][j] = area/new_area
+                    self.mask[i][j] = c/new_c
+                    # self.mask[i][j] = 1/r
 
         self.rectangles.append((small_x, small_y, big_x, big_y, self.mask))
         self.rect = None
