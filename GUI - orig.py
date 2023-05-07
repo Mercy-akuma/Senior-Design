@@ -158,8 +158,6 @@ class GUI:
         """
         This function saves the self.rectangles list to a binary file in the output directory.
         """
-        if self.flag == 0:
-            return
         output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
         with open(os.path.join(output_directory, "rectangles.dat"), "wb") as f:
             pickle.dump(self.rectangles, f)
@@ -169,16 +167,10 @@ class GUI:
         """
         This function loads the rectangles from a binary file and adds them to self.rectangles.
         """
-        if self.flag == 0:
-            return
         output_directory = os.path.join(os.path.dirname(self.image_path), self.imagename + "_analysis")
         with open(os.path.join(output_directory, "rectangles.dat"), "rb") as f:
             self.rectangles = pickle.load(f)
         print("Loaded successfully")
-
-        for old_rect in self.history:
-            self.canvas.delete(old_rect[0])
-            self.canvas.delete(old_rect[1])
 
         orig_height = self.data.shape[0]
         orig_width = self.data.shape[1]
@@ -191,9 +183,8 @@ class GUI:
             start_y = rectangle[1] / (orig_height/trans_height)
             end_x = rectangle[2] / (orig_width/trans_width)
             end_y = rectangle[3] / (orig_height/trans_height)
-            self.rect = self.canvas.create_rectangle(start_x, start_y, end_x, end_y, outline='red')
-            self.text = self.canvas.create_text((start_x + end_x)/2, (start_y + end_y)/2, text=str(count), fill='blue', font=("Purisa", 30))
-            self.history.append((self.rect, self.text))
+            self.canvas.create_rectangle(start_x, start_y, end_x, end_y, outline='red')
+            self.canvas.create_text((start_x + end_x)/2, (start_y + end_y)/2, text=str(count), fill='blue', font=("Purisa", 30))
         self.rect = None
         self.rect_count = len(self.rectangles)
 
@@ -209,8 +200,7 @@ class GUI:
         # print([self.rect_start_y,self.rect_end_y,self.rect_start_x,self.rect_end_x])
         
         # Add a label with the ordinal number of the rectangle in the middle of the rectangle
-        self.text = self.canvas.create_text((self.rect_start_x + self.rect_end_x)/2, (self.rect_start_y + self.rect_end_y)/2, text=str(self.rect_count + 1), fill='blue', font=("Purisa", 30))
-        self.history.append((self.rect, self.text))
+        self.canvas.create_text((self.rect_start_x + self.rect_end_x)/2, (self.rect_start_y + self.rect_end_y)/2, text=str(self.rect_count + 1), fill='blue', font=("Purisa", 30))
         self.rect_start_y = self.rect_start_y * (orig_height/trans_height)
         self.rect_end_y = self.rect_end_y * (orig_height/trans_height)
         self.rect_start_x = self.rect_start_x * (orig_width/trans_width)
@@ -489,6 +479,13 @@ class GUI:
         show_figure_button.pack(side=tk.LEFT)
 
         self.root.mainloop()
+
+
+        
+
+
+
+
 
             
         

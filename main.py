@@ -8,7 +8,7 @@ from image_process.img_reg import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-imagename = "test"
+imagename = "serial"
 
 def run_gui():
     drawer = GUI()
