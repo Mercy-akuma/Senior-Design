@@ -394,17 +394,17 @@ class GUI:
             print("Pixel position: ({}, {})".format(x, y))
     
 
-    def check_mew_image(self):
-        # 检测文件夹下最新的jpg文件
-        folder_path = "Figure/batch_process"
-        files = glob.glob(os.path.join(folder_path, '*.jpg')) # 查找所有jpg文件
-        if len(files) == 0:
-            print("No jpg file found")
-            return None
-        else:
-            latest_file = max(files, key=os.path.getctime) # 找到最新的文件
-            print("Latest jpg file found:", latest_file)
-        self.open_image(latest_file)
+    # def check_mew_image(self):
+    #     # 检测文件夹下最新的jpg文件
+    #     folder_path = "Figure/batch_process"
+    #     files = glob.glob(os.path.join(folder_path, '*.jpg')) # 查找所有jpg文件
+    #     if len(files) == 0:
+    #         print("No jpg file found")
+    #         return None
+    #     else:
+    #         latest_file = max(files, key=os.path.getctime) # 找到最新的文件
+    #         print("Latest jpg file found:", latest_file)
+    #     self.open_image(latest_file)
 
     def show_contour(self):
         fig = plt.figure()
@@ -453,7 +453,7 @@ class GUI:
         file_menu.add_command(label="Import Image", command=self.open_image)
         # file_menu.add_command(label="Import Text", command=self.open_text)
         file_menu.add_command(label="Show Image", command=self.show_image)
-        file_menu.add_command(label="Check New Image", command=self.check_mew_image)
+        # file_menu.add_command(label="Check New Image", command=self.check_mew_image)
         # Operation_menu
         # operation_menu.add_command(label="Output Power", command=self.output_power)
         operation_menu.add_command(label="Enable Connection", command=self.cmd_enable)
