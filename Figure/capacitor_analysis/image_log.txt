@@ -1,0 +1,8 @@
+R-squared value: 0.37620149569563344 
+reg.coef_ value: [13.10040525 13.80229941] 
+reg.intercept_ value: 28.702808226499627 
+b: 28.152978 
+R-squared value: 0.37620149569563344 
+reg.coef_ value: [13.10040525 13.80229941] 
+reg.intercept_ value: 28.702808226499627 
+b: 28.152978 
