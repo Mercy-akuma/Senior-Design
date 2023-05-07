@@ -72,51 +72,6 @@ class Sam():
         with open(self.log_file, 'a') as f:
             print(log, file=f)
     
-        
-    def gen_mask(self,image_path,output_folder,sam):
-        current_time1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        print("Model loaded done", current_time1)
-        print("1111111111111111111111111111111111111111111111111111")
-        #这里是加载图片
-        image = cv2.imread(image_path)
-        #输出图片加载完成的current时间
-        current_time2 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        print("Image loaded done", current_time2)
-        print("2222222222222222222222222222222222222222222222222222")
-        mask_generator = SamAutomaticMaskGenerator(sam)
-        masks = mask_generator.generate(image)
-        current_time3 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        print("Predict done", current_time3)
-        print("3333333333333333333333333333333333333333333333333333")
-        print(masks[0])
-        for i, mask in enumerate(masks):
-            mask_array = mask['segmentation']
-            mask_uint8 = (mask_array * 255).astype(np.uint8)
-
-            # 为每个掩码生成一个唯一的文件名
-            output_file = os.path.join(output_folder, f"mask_{i+1}.png")
-
-            # 保存掩码
-            cv2.imwrite(output_file, mask_uint8)
-
-        height, width, _ = image.shape
-
-
-        merged_mask = np.zeros((height, width), dtype=np.uint8)
-        for i, mask in enumerate(masks):
-            mask_array = mask['segmentation']
-            mask_uint8 = (mask_array * 255).astype(np.uint8)
-
-            # 为每个掩码生成一个唯一的文件名
-            output_file = os.path.join(output_folder, f"mask_{i+1}.png")
-
-            # 保存掩码
-            cv2.imwrite(output_file, mask_uint8)
-
-            merged_mask = np.maximum(merged_mask, mask_uint8)
-
-        merged_output_file = os.path.join(output_folder, "mask_all.png")
-        cv2.imwrite(merged_output_file, merged_mask)
 
     def show_mask(self,mask, ax, random_color=False):
         if random_color:
@@ -166,51 +121,15 @@ class Sam():
             plt.savefig(out_path+"/seg_point_"+str(i)+".jpg")
             plt.close()    
             
-    def seg_chip(self,img_path,out_img):
+    def seg_chip(self,img_path,out_img,box):
         image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         predictor = SamPredictor(self.sam)
         predictor.set_image(image)
-        
-        # offset=self.target_size[0]/8
 
-        # sign_list=[[1,1],[1,-1],[-1,-1],[-1,-1]]
-        offset=30
-        input_box = np.array([offset, offset, self.target_size[0]-offset, self.target_size[1]-offset])
+        input_box = box
 
-        # input_point= np.array([])
-       
-        # new=np.array([self.target_size[0]/2 , self.target_size[1]/2])
-        # # input_point= np.append(input_point,[[self.target_size[0]/2 , self.target_size[1]/2]],axis=0)
-        # input_point= np.append(input_point,[new],axis=0)
-
-        # input_point = np.array([[self.target_size[0]/2 , self.target_size[1]/2]])
-
-
-        # # newArray = np.append(a, [[50, 60]], axis = 0)
-        # # print(newArray)
-
-        # for i in range(4):
-        #     offset_y = sign_list[i][0] * offset
-        #     offset_x = sign_list[i][1] * offset
-        #     input_point= np.append(input_point,[[self.target_size[0]/2 + offset_y, self.target_size[1]/2 + offset_x]],axis=0)
-
-        offset_y = self.target_size[0]/3
-        offset_x = self.target_size[1]/3
-
-        input_box = np.array([ int(self.target_size[0]/2 - offset_y), int(self.target_size[1]/2 - offset_x), int(self.target_size[0]/2 + offset_y), int(self.target_size[1]/2 + offset_x)])
-        print(input_box)
-
-
-        # input_point = np.array([[self.target_size[0]/2 , self.target_size[1]/2],[self.target_size[0]/2 +offset , self.target_size[1]/2 +offset]])
-        # input_label = np.ones(5)
-
-        # mask_input = logits[np.argmax(scores), :, :]  # Choose the model's best mask
-
-
-        # input_point = np.array([point])
-        # input_label = np.array([1])
         masks, scores, logits = predictor.predict(
             point_coords=None,
             point_labels=None,
@@ -267,6 +186,20 @@ class Sam():
         self.logging("run finish at \t{}:\t {},{}".format(end_time,img_name,self.pth_name))
         self.logging("time spend \t{}:\t {},{}".format(end_time-start_time,img_name,self.pth_name))
 
+    def run_sam_box(self,img_name,image_path,box):
+        image = image_path + img_name
+        output_folder = "./out_figs/"+self.pth_name+"/"
+        output_path = output_folder + img_name
+        os.makedirs(output_folder, exist_ok=True)
+
+        # self.gen_mask(image_path,output_folder,self.sam)
+        start_time=time.time()
+        self.logging("run start at \t{}:\t {},{}".format(start_time,img_name,self.pth_name))
+          
+        self.seg_chip(image,output_path,box)
+        end_time=time.time()
+        self.logging("run finish at \t{}:\t {},{}".format(end_time,img_name,self.pth_name))
+        self.logging("time spend \t{}:\t {},{}".format(end_time-start_time,img_name,self.pth_name))
      
 class Trans():
     def __init__(self, 
@@ -330,11 +263,6 @@ class Trans():
         res.save(self.reg_optical)
         
     def cut(self):
-        # 9 =3*3, 
-        # offset_x=int(self.target_size[0]/18)
-        # offset_y=int(self.target_size[1]/9)
-        # cut_optical= cv2.imread(self.img_optical)
-        # res = cut_optical[offset_y:self.target_size[1],offset_x:self.target_size[0]-offset_x]
         res = cv2.imread(self.img_optical)
         cv2.imwrite(self.cut_optical,res)
         
@@ -359,14 +287,6 @@ class Trans():
         
         # 4 points 00 10 01 11
         pts3D=np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
-
-        # cut to same %
-
-
-        # plt.show()
-        # cv2.imwrite('/out_figs/mask_bboxs.jpg',mask)
-
-        # print(pts3D)
         return pts3D
         
     def perspective(self,img,pts3D1,pts3D2):
@@ -403,38 +323,45 @@ class Trans():
         res = cv2.addWeighted(img1, 0.4, img2, 0.6, 0)
         cv2.imwrite(self.img_merged,res)
 
-    
 
-def img_reg():
-    os.chdir(os.path.dirname(__file__))
-       
-    
-    # img_list=["test_rgb_image.jpg","test_thermal.png","test.jpg"]
-    img_list=["reg_optical.jpg","reg_thermal.jpg"]
-    image_path="./out_figs/"
-    pth_list=["sam_vit_h_4b8939.pth","sam_vit_b_01ec64.pth","sam_vit_l_0b3195.pth"]
-    pth_type=["vit_h","vit_b","vit_l"]
-    
-    target_size = (640,480)
-    skip=0
-    for idx,pth_name in enumerate(pth_list):
-        if idx != 1:
-            continue
-        log_file = pth_name + "_log.txt"
-        sam=Sam(target_size,pth_name, pth_type[idx],log_file)
-        if skip:
-            break
+class Pre_process():
+    def __init__(self, 
+                imagename : str= "FPGA1",
+                target_size: tuple = (640,480)
+        ):
+        self.imagename = imagename
+        self.target_size = target_size
+        # os.chdir("./image_process")
+        os.chdir(os.path.dirname(__file__))
+        # img_list=["test_rgb_image.jpg","test_thermal.png","test.jpg"]
+        self.img_list=["reg_optical.jpg","reg_thermal.jpg"]
+        self.image_path="./out_figs/"
+        self.pth_list=["sam_vit_h_4b8939.pth","sam_vit_b_01ec64.pth","sam_vit_l_0b3195.pth"]
+        self.pth_type=["vit_h","vit_b","vit_l"]
+        self.idx=1
+        self.pth_name=self.pth_list[self.idx]
+        
+        self.log_file = self.pth_name + "_log.txt"
+        self.sam=Sam(self.target_size,self.pth_name, self.pth_type[self.idx],self.log_file)
 
-        # while true if add image
-        prefix = "../Figure/" + imagename
-        trans=Trans(raw_optical= prefix + "_rgbimage.jpg", raw_thermal=prefix + "_thermal.png", img_merged= prefix + "_result.jpg")
-        trans.resize_input()
+        # resize images
+        prefix = "../Figure/" + self.imagename
+        self.trans=Trans(raw_optical= prefix + "_rgbimage.jpg", raw_thermal=prefix + "_thermal.png", img_merged= prefix + "_result.jpg")
+        self.trans.resize_input()
+        # Find inputbox here:
+
+
+    def img_reg(self,boxes):
+
+        # box = np.array([ small_y,  small_x,big_y, big_x])
         # modify img_list for new pair of image TODO
-        for img_name in img_list:
-            sam.run_sam(img_name,image_path)
-    
-        trans.reg(sam.masked_name[0],sam.masked_name[1])
-            
+        # for img_name in img_list:
+        #     self.sam.run_sam(img_name,image_path)
+        for idx,img_name in enumerate(self.img_list):
+            self.sam.run_sam_box(img_name,self.image_path,boxes[idx])
+
+        self.trans.reg(self.sam.masked_name[0],self.sam.masked_name[1])    
+
     
     
     

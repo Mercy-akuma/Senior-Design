@@ -399,9 +399,9 @@ class GUI:
             curline = p.stdout.readline()
         p.wait()
     
-    def show_pixel_position(self, event):
-            x, y = event.x, event.y
-            print("Pixel position: ({}, {})".format(x, y))
+    # def show_pixel_position(self, event):
+    #         x, y = event.x, event.y
+    #         print("Pixel position: ({}, {})".format(x, y))
     
 
     # def check_mew_image(self):
