@@ -44,7 +44,8 @@ class Sam():
                 target_size: tuple = (640,480),
                 pth_name: str ="sam_vit_b_01ec64.pth",
                 pth_type: str ="vit_b",
-                log_file: str ="log.txt"
+                log_file: str ="log.txt",
+                enable : bool = False
         ):
         # self.masked_optical="D:\_docker_mnt\py\sd\image_process\out_figs\sam_vit_h_4b8939.pth\img_optical.jpg+new.jpg"
         # self.masked_thermal="D:\_docker_mnt\py\sd\image_process\out_figs\sam_vit_h_4b8939.pth\img_thermal.jpg+new.jpg"
@@ -60,8 +61,9 @@ class Sam():
         start_time=time.time()
         self.logging("load model start at \t{}:\t {}".format(start_time,self.pth_name))
         self.sam = sam_model_registry[self.pth_type](checkpoint=self.model_path)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.sam = self.sam.to(self.device)
+        if enable:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.sam = self.sam.to(self.device)
         end_time=time.time()
         self.logging("load model end at \t{}:\t {}".format(end_time,self.pth_name))
         self.logging("time spend \t{}:\t {}".format(end_time-start_time,self.pth_name))
@@ -247,6 +249,7 @@ class Trans():
         canvas.paste(img, box=(offset_x, offset_y))         # 将放缩后的图片粘贴到幕布上
         # box参数用来确定要粘贴的图片左上角的位置。offset_x是x轴单侧留白，offset_y是y轴单侧留白，这样就能保证能将图片填充在幕布的中央
         
+        # canvas=self.crop_img(canvas)
         return canvas
     
     def resize_input(self, target = (640,480)):
@@ -271,7 +274,95 @@ class Trans():
         # # mask_find_bboxs
         # retval, labels, stats, centroids = cv2.connectedComponentsWithStats(mask) # connectivity参数的默认值为8
         # stats = stats[stats[:,4].argsort()]
-        # bboxs = stats[:-1]     
+        # bboxs = stats[:-1]    
+        
+
+    def resize_cv(self,img, new_size):
+        height, width = img.shape[:2]
+        new_width, new_height = new_size
+
+        # determine scaling factor
+        if height > width:
+            scale = new_height / height
+        else:
+            scale = new_width / width
+
+        # resize the image
+        resized_img = cv2.resize(img, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+        return resized_img
+
+    # def get_tight_boundary_box(self,max_contour):
+    #     # Get bounding box of the contour
+    #     x, y, w, h = cv2.boundingRect(max_contour)
+        
+    #     # Get mask for the contour
+    #     mask = np.zeros(self.target_size, dtype=np.uint8)
+    #     cv2.drawContours(mask, [max_contour], 0, 1, -1)
+        
+    #     # Check if 90% of the pixels within the bounding box are non-zero
+    #     box_mask = mask[y:y+h, x:x+w]
+    #     if cv2.countNonZero(box_mask) / float(box_mask.size) < 0.9:
+    #         # Tighten the bounding box by iteratively removing 2 pixels from each edge
+    #         for i in range(2):
+    #             x, y, w, h = x + 2, y + 2, w - 4, h - 4
+    #             box_mask = mask[y:y+h, x:x+w]
+    #             if cv2.countNonZero(box_mask) / float(box_mask.size) >= 0.9:
+    #                 break
+        
+    #     return x, y, w, h
+    
+    def get_tight_boundary_box(self, max_contour):
+        x, y, w, h = cv2.boundingRect(max_contour)
+        mask = np.zeros(self.target_size, dtype=np.uint8)
+        cv2.drawContours(mask, [max_contour], 0, 255, thickness=cv2.FILLED)
+
+        W,H= w, h
+        factor = 0.05
+        # check rows
+        roi = mask[y:y+h, x:x+w]
+        reversed_rows_roi = np.flipud(roi)
+        for row in roi:
+            non_zero_count = np.count_nonzero(row)
+            if non_zero_count <= W*factor:
+                # Reduce the height of the bounding box by 1 pixel
+                y += 1
+                h -= 1
+            else:    
+                break
+            
+        for row in reversed_rows_roi:
+            non_zero_count = np.count_nonzero(row)
+            if non_zero_count <= W*factor:
+                # Reduce the height of the bounding box by 1 pixel
+                h -= 1
+            else:    
+                break
+        
+        roi_T=roi.T
+        reversed_cols_roi = np.flipud(roi_T)
+        
+        # check cols
+        for col in roi_T:
+            non_zero_count = np.count_nonzero(col)
+            if non_zero_count <= H*factor:
+                # Reduce the height of the bounding box by 1 pixel
+                x += 1
+                w -= 1
+            else:    
+                break
+            
+        for col in reversed_cols_roi:
+            non_zero_count = np.count_nonzero(col)
+            if non_zero_count <= H*factor:
+                # Reduce the height of the bounding box by 1 pixel
+                w -= 1
+            else:    
+                break
+
+        return x, y, w, h
+
+
     def get_edge_box(self,mask_img):
         mask = cv2.imread(mask_img, cv2.COLOR_BGR2GRAY)
         # 转换成二值图
@@ -290,14 +381,47 @@ class Trans():
         max_contour=max(contours_list, key=lambda x: x[1])[0]
         # boxes=cv2.minAreaRect(max_contour)
         x , y, w, h=cv2.boundingRect(max_contour)
+        print(x , y, w, h)
         
+        x , y, w, h=self.get_tight_boundary_box(max_contour)
+        print(x , y, w, h)
         pts3D=np.float32([[x, y], [x+w, y], [x, y+h], [x+w, y+h]])
         
         # pts3D = np.int0(pts3D)
         # # pts3D = np.float32(pts3D)
         
-        # new_image=cv2.drawContours(mask, [pts3D ], 0, (0, 255, 0), 2)
-        # cv2.imwrite(mask_img+"box.jpg", new_image)
+        # new_image=cv2.drawContours(mask, [pts3D], 0, (0, 255, 0), 2)
+        # cv2.imwrite
+        pt1 = (int(pts3D[0][0]), int(pts3D[0][1]))
+        pt2 = (int(pts3D[3][0]), int(pts3D[3][1]))
+
+        # Draw the rectangle on the image
+        color = (0, 0, 255)
+        thickness = 2
+        basename = mask_img.split("+")[0]
+        img = cv2.imread(basename)
+        # pil_img= Image.open(basename)
+        img=self.crop_img(img)
+        img=self.resize_cv(img,self.target_size)
+        
+        # # Crop the canvas to remove any remaining whitespace
+        # bbox = canvas.getbbox()
+        # cropped_canvas = canvas.crop(bbox)
+
+        # # Convert the cropped canvas to a NumPy array
+        # np_image = np.asarray(cropped_canvas)
+
+        # Convert the NumPy array to a cv2 format image
+        # img = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+        # img=self.crop_img(img)
+        
+        
+
+        cv2.circle(img, (640,480), 5, (0, 0, 255), -1)
+        
+        
+        cv2.rectangle(img, pt1, pt2, color, thickness)
+        cv2.imwrite(mask_img+"box.jpg", img)
         
         # pts3D = np.float32(pts3D)
         # pts3D = np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
@@ -409,6 +533,24 @@ class Trans():
         res = cv2.addWeighted(img1, 0.4, img2, 0.6, 0)
         cv2.imwrite(self.img_merged,res)
 
+    def crop_img(self,img):
+        # Convert the image to grayscale
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Apply thresholding to obtain a binary image
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+
+        # Find contours in the binary image
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Get the bounding box of the largest contour
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+
+        # Crop the image using the bounding box coordinates
+        img_cropped = img[y:y+h, x:x+w]
+        
+        return img_cropped
 
 class Pre_process():
     def __init__(self, 
