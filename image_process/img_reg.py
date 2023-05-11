@@ -265,31 +265,44 @@ class Trans():
     def cut(self):
         res = cv2.imread(self.img_optical)
         cv2.imwrite(self.cut_optical,res)
-        
-    def get_edge_box(self,mask_img):
-        mask = cv2.imread(mask_img, cv2.COLOR_BGR2GRAY)
-        # 转换成二值图
-        ret, thresh = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
-        # ax = plt.axes()
+    
+    # ax = plt.axes()
         # # plt.imshow(mask, cmap='bone')
         # # mask_find_bboxs
         # retval, labels, stats, centroids = cv2.connectedComponentsWithStats(mask) # connectivity参数的默认值为8
         # stats = stats[stats[:,4].argsort()]
-        # bboxs = stats[:-1]
-        
+        # bboxs = stats[:-1]     
+    def get_edge_box(self,mask_img):
+        mask = cv2.imread(mask_img, cv2.COLOR_BGR2GRAY)
+        # 转换成二值图
+        ret, thresh = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        boxes = []
-        area = []
-        # dot=[]
-        for idx,c in enumerate(contours):
-            area.append((cv2.contourArea(c),idx))
+        # boxes = []
+        # area = []
+        # # dot=[]
+        # for idx,c in enumerate(contours):
+        #     area.append((cv2.contourArea(c),idx))
 
-
-        c = contours[idx]
-        boxes=cv2.minAreaRect(c)
+        contours_list=[(c,cv2.contourArea(c)) for c in contours]
+        # print(contours_list)
+        # c = contours[idx]
+        max_contour=max(contours_list, key=lambda x: x[1])[0]
+        # boxes=cv2.minAreaRect(max_contour)
+        x , y, w, h=cv2.boundingRect(max_contour)
+        
+        pts3D=np.float32([[x, y], [x+w, y], [x, y+h], [x+w, y+h]])
+        
+        # pts3D = np.int0(pts3D)
+        # # pts3D = np.float32(pts3D)
+        
+        # new_image=cv2.drawContours(mask, [pts3D ], 0, (0, 255, 0), 2)
+        # cv2.imwrite(mask_img+"box.jpg", new_image)
+        
+        # pts3D = np.float32(pts3D)
         # pts3D = np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
 
+    
             # # 找到边界坐标
             # min_list=[] # 保存单个轮廓的信息，x,y,w,h,area。 x,y 为起始点坐标
             # x, y, w, h = cv2.boundingRect(c)  # 计算点集最外面的矩形边界

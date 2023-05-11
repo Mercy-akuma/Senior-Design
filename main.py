@@ -27,4 +27,10 @@ if __name__ == '__main__':
     # t1.join()
     # t2.join()
 
-    run_gui()
+    # run_gui()
+    os.chdir("D:\\_tmp_codes\\Senior-Design\\image_process")
+    print (os.getcwd())
+    trans=Trans()
+    im1="D:\\_tmp_codes\\Senior-Design\\image_process\\out_figs\\sam_vit_b_01ec64.pth\\reg_optical.jpg+new.jpg"
+    im2="D:\\_tmp_codes\\Senior-Design\\image_process\\out_figs\\sam_vit_b_01ec64.pth\\reg_thermal.jpg+new.jpg"
+    trans.reg(im1,im2)
