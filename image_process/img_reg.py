@@ -269,24 +269,94 @@ class Trans():
     def get_edge_box(self,mask_img):
         mask = cv2.imread(mask_img, cv2.COLOR_BGR2GRAY)
         # 转换成二值图
-        ret, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
-        ax = plt.axes()
-        # plt.imshow(mask, cmap='bone')
-        # mask_find_bboxs
-        retval, labels, stats, centroids = cv2.connectedComponentsWithStats(mask) # connectivity参数的默认值为8
-        stats = stats[stats[:,4].argsort()]
-        bboxs = stats[:-1]
+        ret, thresh = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+        # ax = plt.axes()
+        # # plt.imshow(mask, cmap='bone')
+        # # mask_find_bboxs
+        # retval, labels, stats, centroids = cv2.connectedComponentsWithStats(mask) # connectivity参数的默认值为8
+        # stats = stats[stats[:,4].argsort()]
+        # bboxs = stats[:-1]
         
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        boxes = []
+        area = []
+        # dot=[]
+        for idx,c in enumerate(contours):
+            area.append((cv2.contourArea(c),idx))
+
+
+        c = contours[idx]
+        boxes=cv2.minAreaRect(c)
+        # pts3D = np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
+
+            # # 找到边界坐标
+            # min_list=[] # 保存单个轮廓的信息，x,y,w,h,area。 x,y 为起始点坐标
+            # x, y, w, h = cv2.boundingRect(c)  # 计算点集最外面的矩形边界
+            # min_list.append(x)
+            # min_list.append(y)
+            # min_list.append(w)
+            # min_list.append(h)
+            # min_list.append(w*h) # 把轮廓面积也添加到 dot 中
+            # dot.append(min_list)
+
+        # # 找出最大矩形的 x,y,w,h,area
+        # max_area=dot[0][4] # 把第一个矩形面积当作最大矩形面积
+        # for inlist in dot:
+        #     area=inlist[4]
+        #     if area >= max_area:
+        #         x=inlist[0]
+        #         y=inlist[1]
+        #         w=inlist[2]
+        #         h=inlist[3]
+        #         max_area=area
+
+        # print(x,y,w,h)
+        # pts3D=np.float32([[x, y], [x+w, y], [x, y+h], [x+w, y+h]])
+        # contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # bounding_boxes = [cv2.boundingRect(cnt) for cnt in contours]
+        
+        # for bbox in bounding_boxes:
+        #     [x , y, w, h] = bbox
+        #     cv2.rectangle(bgr_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
         # print(cv2.__version__)
+        # areas = []
+ 
+        # for c in range(len(contours)):
+        #     areas.append(cv2.contourArea(contours[c]))
+        # max_id = areas.index(max(areas))
+        # max_rect = cv2.minAreaRect(contours[max_id])
+
+        
+        # max_box = cv2.boxPoints(max_rect)
+        # max_box = np.int0(max_box)
+        # pts3D=np.float32(max_box)
+
+        # [[ 97. 119.]
+        # [478. 119.]
+        # [ 97. 405.]
+        # [478. 405.]]
+
+        # [[ 95. 401.]
+        # [ 96. 117.]
+        # [497. 120.]
+        # [ 96. 404.]]
+
+        # [[ 53. 426.]
+        # [ 55.  47.]
+        # [567.  51.]
+        # [564. 430.]]
 
         # print(bboxs)
-        b=bboxs[-1]
+        # b= cv2.boundingRect(contours[-1])
+        # print(b)
         # for b in bboxs:
         #     # rect = patches.Rectangle((b[0], b[1]), b[2], b[3], linewidth=1, edgecolor='r', facecolor='none')
         #     # print(b)
         
         # 4 points 00 10 01 11
-        pts3D=np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
+        # pts3D=np.float32([[b[0], b[1]], [b[0]+b[2], b[1]], [b[0], b[1]+b[3]], [b[0]+b[2], b[1]+b[3]]])
         return pts3D
         
     def perspective(self,img,pts3D1,pts3D2):
@@ -311,6 +381,9 @@ class Trans():
         # set 
         pts3D1[1][0] = pts3D1[0][0] + col_width
         pts3D1[3][0] = pts3D1[1][0]
+
+        print(pts3D1)
+        print(pts3D2)
 
         img_optical= cv2.imread(self.reg_optical)
         img=self.perspective(img_optical,pts3D1,pts3D2)

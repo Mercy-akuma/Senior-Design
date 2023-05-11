@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import argparse
 
+
 # 创建ArgumentParser对象，用于接收用户输入的参数
 parser = argparse.ArgumentParser()
 
@@ -29,5 +30,6 @@ def get_temperature(figure_path):
     np.savetxt(txt_path ,T , fmt='%f',delimiter=',')
     print("Finish")
 
-# 运行函数，将用户输入的imagename与路径拼接传入函数
-get_temperature("Figure/" + args.imagename +".jpg")
+if __name__ == '__main__':
+    # 运行函数，将用户输入的imagename与路径拼接传入函数
+    get_temperature("Figure/" + args.imagename +".jpg")

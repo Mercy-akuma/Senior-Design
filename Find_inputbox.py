@@ -2,6 +2,7 @@ from tkinter import *
 from PIL import Image, ImageDraw, ImageTk
 import os
 import numpy as np
+import threading
 
 class RectangleDrawer:
     def __init__(self, image_path):
@@ -10,7 +11,7 @@ class RectangleDrawer:
         self.draw = ImageDraw.Draw(self.image)
 
         # 创建一个Tkinter窗口，并在其中显示图像
-        self.root = Tk()
+        self.root = Toplevel()
         self.canvas = Canvas(self.root, width=self.image.width, height=self.image.height)
         self.canvas.pack()
         self.tk_image = ImageTk.PhotoImage(self.image)
@@ -27,8 +28,14 @@ class RectangleDrawer:
         self.rect_shape = None
         self.rect_coords = None
 
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_me)
+
         # 开始Tkinter主循环
         self.root.mainloop()
+
+    def quit_me(self):
+        self.root.quit()
+        self.root.destroy()
 
     def start_rect(self, event):
         # 开始绘制矩形
@@ -64,7 +71,7 @@ def find_input_box(optical_path, thermal_path):
 # 测试代码
 if __name__ == '__main__':
     os.chdir(os.path.dirname(__file__))
-    print(find_input_box('Figure/FPGA1_rgbimage.jpg','Figure/FPGA1_thermal.png'))
+    print(find_input_box('Figure/FLIR0359_rgbimage.jpg','Figure/FLIR0359_thermal.png'))
 
 
 

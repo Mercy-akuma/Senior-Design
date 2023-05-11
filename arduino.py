@@ -11,9 +11,13 @@ def control_motor():
     demo3=b'a'
     demo4=b'd'
     demo5=b'p'
+    demo6=b'u'
+    demo7=b'i'
 
     while 1:
         c=input('order:')
+        if c == "":
+            continue
         if c == "q":
             break
         c=ord(c)#transfer c to ASCII
@@ -33,5 +37,9 @@ def control_motor():
             ser.write(demo4)
             time.sleep(0.7)
             ser.write(demo5)
-        # if(c==112):
-        #     ser.write(demo5)
+        if(c==117):
+            ser.write(demo6)
+            time.sleep(0.7)
+            ser.write(demo7)
+            time.sleep(0.7)
+            ser.write(demo5)

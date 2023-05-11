@@ -15,9 +15,16 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 import pickle
+import shutil
+from PIL import ImageGrab
 
 from scipy.optimize import nnls
-# from  main import key
+from  main import imagename
+from Find_inputbox import *
+from image_process.img_reg import *
+
+def copy_file(src_path, dest_path):
+    shutil.copy(src_path, dest_path)
 
 class GUI:
     def __init__(self):
@@ -133,7 +140,27 @@ class GUI:
     #     self.data = None
     #     file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
     #     self.data = np.transpose(np.loadtxt(file_path, delimiter=','))
-    
+    # def save_canvas(self):
+    #     x = self.canvas.winfo_rootx()
+    #     y = self.canvas.winfo_rooty()
+    #     width = self.canvas.winfo_width()
+    #     height = self.canvas.winfo_height()
+    #     x1 = x
+    #     y1 = y
+    #     x2 = x + width
+    #     y2 = y + height
+    #     image = ImageGrab.grab((x1, y1, x2, y2))
+    #     save_path = self.folderpath + "/" + self.imagename + "_analysis" + "/Component_location.jpg"
+    #     image.save(save_path)
+
+    def overlapping(self):
+        # # overlapping
+        global imagename
+        pre = Pre_process(imagename,(640,480)) # resize imagename
+        boxes = find_input_box(pre.trans.reg_optical, pre.trans.img_thermal)
+        pre.img_reg(boxes)
+        
+
     def start_rect(self, event):
         if self.flag == 0:
             return
@@ -277,6 +304,7 @@ class GUI:
         self.rect_count += 1 # Increment the counter for each new rectangle draw
         
     def output_power(self):
+        setattr(self, 'total_power', float(self.total_power_entry.get()))
         # Linear regression to get the energy of each rectangle
         X = []
         for rect in self.rectangles:
@@ -304,7 +332,7 @@ class GUI:
 
         # Calculate the R-squared value
         r_squared = reg.score(X, y)
-        print("R-squared value:", r_squared)
+        # print("R-squared value:", r_squared)
         self.logging("R-squared value: {} ".format(r_squared))
         self.logging("reg.coef_ value: {} ".format(reg.coef_))
         self.logging("reg.intercept_ value: {} ".format(reg.intercept_))
@@ -315,6 +343,8 @@ class GUI:
             output_text += "Component {}'s power consumption is {}\n".format(i + 1, rectangle_energy[i])
             self.plot_mask(i)
         self.out_result(output_text)
+        # self.save_canvas()
+
         self.output_window = tk.Toplevel()
         self.output_window.geometry("500x500") # increase the size of the window
 
@@ -444,6 +474,12 @@ class GUI:
         self.output_window.quit()
         self.output_window.destroy()
 
+    def move(self):
+        global imagename
+        imagename = self.image_entry.get()
+        copy_file("E:/DCIM/100_FLIR/"+ imagename +".jpg", "Figure/" + imagename +".jpg")
+        print("\n Copied successfully")
+
     def run(self):
         self.root = tk.Tk()
         self.root.title("Power Consumption GUI")
@@ -451,11 +487,11 @@ class GUI:
         self.canvas.pack(fill=tk.BOTH, expand=True)
         # Add a label and entry for total_power
         tk.Label(self.root, text="Total Power:").pack(side=tk.LEFT)
-        total_power_entry = tk.Entry(self.root)
-        total_power_entry.pack(side=tk.LEFT)
+        self.total_power_entry = tk.Entry(self.root)
+        self.total_power_entry.pack(side=tk.LEFT)
         # Add a button to set total_power
-        set_power_button = tk.Button(self.root, text="Set Power", command=lambda: setattr(self, 'total_power', float(total_power_entry.get())))
-        set_power_button.pack(side=tk.LEFT)
+        # set_power_button = tk.Button(self.root, text="Set Power", command=lambda: setattr(self, 'total_power', float(total_power_entry.get())))
+        # set_power_button.pack(side=tk.LEFT)
 
         menu_bar = tk.Menu(self.root)
         file_menu = tk.Menu(menu_bar, tearoff=0)
@@ -469,6 +505,7 @@ class GUI:
         # operation_menu.add_command(label="Output Power", command=self.output_power)
         operation_menu.add_command(label="Enable Connection", command=self.cmd_enable)
         operation_menu.add_command(label="Disable Connection", command=self.cmd_disable)
+        operation_menu.add_command(label="Process Image", command=self.overlapping)
         # operation_menu.add_command(label="Enable Drawing", command=self.enable_drawing)
         # operation_menu.add_command(label="Disable Drawing", command=self.disable_drawing)
         # operation_menu.add_command(label="Quit", command=self.break_mainloop)
@@ -498,6 +535,15 @@ class GUI:
         # Add a button to load rectangles data
         show_figure_button = tk.Button(self.root, text="Load Location", command=self.load_location)
         show_figure_button.pack(side=tk.LEFT)
+
+        # Add a label and entry for total_power
+        tk.Label(self.root, text="Captured image name:").pack(side=tk.TOP)
+        self.image_entry = tk.Entry(self.root)
+        self.image_entry.pack(side=tk.TOP)
+        # Add a button to set total_power
+        set_image_button = tk.Button(self.root, text="Copy image", command=self.move)
+        set_image_button.pack(side=tk.TOP)
+
 
         self.root.mainloop()
 

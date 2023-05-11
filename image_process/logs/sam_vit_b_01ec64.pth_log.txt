@@ -1,9 +1,9 @@
-load model start at 	1683458559.3234916:	 sam_vit_b_01ec64.pth
-load model end at 	1683458560.209703:	 sam_vit_b_01ec64.pth
-time spend 	0.8862113952636719:	 sam_vit_b_01ec64.pth
-run start at 	1683458570.6682973:	 reg_optical.jpg,sam_vit_b_01ec64.pth
-run finish at 	1683458575.5548258:	 reg_optical.jpg,sam_vit_b_01ec64.pth
-time spend 	4.886528491973877:	 reg_optical.jpg,sam_vit_b_01ec64.pth
-run start at 	1683458575.5558267:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
-run finish at 	1683458575.9759386:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
-time spend 	0.42011189460754395:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
+load model start at 	1683789771.0431595:	 sam_vit_b_01ec64.pth
+load model end at 	1683789771.9854927:	 sam_vit_b_01ec64.pth
+time spend 	0.9423332214355469:	 sam_vit_b_01ec64.pth
+run start at 	1683789778.0977395:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+run finish at 	1683789783.5384846:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+time spend 	5.440745115280151:	 reg_optical.jpg,sam_vit_b_01ec64.pth
+run start at 	1683789783.539485:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
+run finish at 	1683789783.9880471:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
+time spend 	0.4485621452331543:	 reg_thermal.jpg,sam_vit_b_01ec64.pth
