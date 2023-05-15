@@ -159,7 +159,7 @@ class GUI:
         pre = Pre_process(imagename,(640,480)) # resize imagename
         boxes = find_input_box(pre.trans.reg_optical, pre.trans.img_thermal)
         pre.img_reg(boxes)
-        
+        print("Finish processing.")
 
     def start_rect(self, event):
         if self.flag == 0:

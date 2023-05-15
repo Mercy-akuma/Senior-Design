@@ -519,8 +519,8 @@ class Trans():
         pts3D1[1][0] = pts3D1[0][0] + col_width
         pts3D1[3][0] = pts3D1[1][0]
 
-        print(pts3D1)
-        print(pts3D2)
+        # print(pts3D1)
+        # print(pts3D2)
 
         img_optical= cv2.imread(self.reg_optical)
         img=self.perspective(img_optical,pts3D1,pts3D2)

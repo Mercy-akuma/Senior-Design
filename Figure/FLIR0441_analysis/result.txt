@@ -1,0 +1,7 @@
+Component 1's power consumption is 0.6305352532726373
+Component 2's power consumption is 0.1292478391700291
+Component 3's power consumption is 0.0701761302654976
+Component 4's power consumption is 0.16236214130531884
+Component 5's power consumption is 0.0017363236112306866
+Component 6's power consumption is 0.005942312375286583
+
